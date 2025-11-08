@@ -1,57 +1,98 @@
-// src/components/DashboardLayout.js
+// src/components/dashbrdlayout.js (CORRECTED IMPORTS)
 
 import SidebarNav from './SidebarNav';
 import HeaderBar from './HeaderBar';
-import WidgetCard from './WidgetCard'; // Import the new card component
+import WidgetCard from './WidgetCard';
+// Add Typography and LinearProgress to this line
+import { Box, Grid, Button, TextField, LinearProgress, Typography } from '@mui/material'; 
 
 function DashboardLayout() {
   return (
-    // Main flex container for the entire screen (Sidebar + Main Content)
-    <div className="dashboard-layout" style={{ display: 'flex', minHeight: '100vh', background: '#f8f9fa' }}>
+    // Main container using MUI Box
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
       <SidebarNav />
 
-      <main className="main-content" style={{ flex: 1, padding: '1.5rem 2.5rem' }}>
+      {/* Main Content Area */}
+      <Box component="main" sx={{ flexGrow: 1 }}>
         <HeaderBar />
 
-        {/* The Widget Grid: using CSS Grid for a responsive, modular layout */}
-        <div className="widget-grid" style={{ 
-            display: 'grid', 
-            // Creates responsive columns: min width 320px, max 1 fraction unit
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-            gap: '1.5rem', 
-            marginTop: '2rem' 
-        }}>
-          {/* 1. Doubt Solver Widget (The first MVP feature) [cite: 19] */}
-          <WidgetCard title="🧠 Ask a Doubt">
-            <p>Type your academic question below and get an instant AI explanation.</p>
-            <input type="text" placeholder="e.g., What is mitosis?" style={{ width: '100%', padding: '10px' }}/>
-          </WidgetCard>
+        {/* Content Padding */}
+        <Box sx={{ p: 4, pt: 3 }}> 
+          
+          {/* The Widget Grid: using MUI Grid for professional responsiveness */}
+          <Grid container spacing={3}>
+            
+            {/* 1. Doubt Solver Widget (Main Feature - takes up more space) */}
+            <Grid item xs={12} md={7}>
+              <WidgetCard title="🧠 Ask a Doubt" minHeight={300}>
+                <Box sx={{ mt: 2 }}>
+                    <TextField 
+                        fullWidth 
+                        multiline
+                        rows={4} 
+                        placeholder="Type your academic question here (e.g., Explain the process of Photosynthesis in simple terms)..."
+                        variant="outlined"
+                        sx={{ mb: 1, bgcolor: '#fbfbfb', borderRadius: '8px' }}
+                    />
+                    <Button variant="contained" color="primary" sx={{ bgcolor: '#4CAF50', '&:hover': { bgcolor: '#43a047' }}}>
+                        Get AI Answer
+                    </Button>
+                </Box>
+              </WidgetCard>
+            </Grid>
 
-          {/* 2. Notes Summarizer Widget */}
-          <WidgetCard title="📑 Notes Summarizer">
-            <p>Upload your PDF/notes to get key concepts instantly.</p>
-            <button>Upload Notes</button>
-          </WidgetCard>
+            {/* 2. Progress Tracker (Slightly smaller, fits next to Doubt Solver) */}
+            <Grid item xs={12} md={5}>
+              <WidgetCard title="📈 Progress Tracker" minHeight={300}>
+                 <Typography variant="body1" sx={{ mb: 2 }}>
+                    You have covered **75%** of your target topics this week.
+                 </Typography>
+                 <LinearProgress variant="determinate" value={75} sx={{ height: 10, borderRadius: 5, mb: 3 }} />
+                 <Button variant="outlined" size="small">View Detailed Report</Button>
+              </WidgetCard>
+            </Grid>
+            
+            {/* 3. Notes Summarizer Widget (Standard size) */}
+            <Grid item xs={12} sm={6} lg={4}>
+              <WidgetCard title="📑 Notes Summarizer">
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                    Upload notes or PDFs to get a concise, AI-powered summary.
+                </Typography>
+                <Button variant="contained" color="secondary">
+                    Upload File
+                </Button>
+              </WidgetCard>
+            </Grid>
+            
+            {/* 4. Smart Quiz Generator Widget (Standard size) */}
+            <Grid item xs={12} sm={6} lg={4}>
+              <WidgetCard title="📝 Smart Quiz">
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                    Generate a practice quiz or flashcards from your uploaded material.
+                </Typography>
+                <Button variant="contained" color="info">
+                    Start Quiz
+                </Button>
+              </WidgetCard>
+            </Grid>
+            
+            {/* 5. Quick Revision Widget (Standard size) */}
+            <Grid item xs={12} sm={6} lg={4}>
+              <WidgetCard title="💡 Quick Revision">
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                    **Newton's Second Law:** $F = ma$
+                    <br/>
+                    **Mitosis Stages:** Prophase, Metaphase, Anaphase, Telophase.
+                </Typography>
+                <Button variant="text" size="small">More Definitions</Button>
+              </WidgetCard>
+            </Grid>
+            
+          </Grid>
           
-          {/* 3. Smart Quiz Generator Widget */}
-          <WidgetCard title="📝 Smart Quiz">
-            <p>Start a practice quiz based on your latest study material.</p>
-            <button>Start Quiz</button>
-          </WidgetCard>
-
-          {/* 4. Progress Tracker Widget */}
-          <WidgetCard title="📈 Progress Tracker">
-            <p>You have covered 75% of Biology. Revise Chemistry next!</p>
-          </WidgetCard>
-          
-          {/* 5. Quick Revision Widget */}
-          <WidgetCard title="💡 Quick Revision">
-            <p>Formula of acceleration: a = (v - u) / t</p>
-          </WidgetCard>
-          
-        </div>
-      </main>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

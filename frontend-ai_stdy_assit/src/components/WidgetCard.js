@@ -1,23 +1,30 @@
-function WidgetCard({ title, children }) {
+// src/components/WidgetCard.js (Refactored with MUI)
+import { Card, CardContent, Typography, Box } from '@mui/material';
+
+function WidgetCard({ title, children, minHeight = 200 }) { // Added minHeight prop
   return (
-    // 'widget-card' class for styling (background, border-radius, shadow)
-    <div className="widget-card" style={{ 
-        padding: '1.5rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)', 
-        backgroundColor: '#fff',
-        // Example sizing for grid items: 350px width, flex for responsiveness
-        minWidth: '320px', 
-        flex: 1 
-    }}>
-      {/* Card Title */}
-      <h2>{title}</h2>
-      
-      {/* Card Content (passed as children) */}
-      <div className="card-content">
-        {children}
-      </div>
-    </div>
+    <Card 
+        sx={{ 
+            borderRadius: '12px', // Rounded corners [cite: 326]
+            boxShadow: '0 4px 12px rgba(44, 62, 80, 0.08)', // Professional soft shadow [cite: 761]
+            minHeight: minHeight, // For uniform sizing
+            display: 'flex',
+            flexDirection: 'column'
+        }}
+    >
+      <CardContent sx={{ p: 3, flexGrow: 1 }}>
+        <Typography 
+            variant="h6" 
+            component="h2" 
+            gutterBottom 
+            sx={{ fontWeight: 'bold', color: '#333' }}>
+          {title}
+        </Typography>
+        <Box className="card-content">
+          {children}
+        </Box>
+      </CardContent>
+    </Card>
   );
 }
 
