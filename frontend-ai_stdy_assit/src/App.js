@@ -1,23 +1,16 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js
+import './App.css'; // Keep or remove, depending on your styling choice
+import SidebarNav from './components/SidebarNav'; 
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <SidebarNav /> 
+      {/* Main content area will go next to this component */}
+      <main style={{ flex: 1, padding: '2rem' }}>
+          <h1>Welcome to your AI Study Assistant!</h1>
+          <p>The sidebar is working!</p>
+      </main>
     </div>
   );
 }
