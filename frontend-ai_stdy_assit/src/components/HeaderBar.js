@@ -11,7 +11,7 @@ function HeaderBar() {
         sx={{ 
             bgcolor: 'white', 
             color: '#2d3436', 
-            boxShadow: '0 1px 4px rgba(0,0,0,0.04)' // Soft shadow [cite: 760]
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)' 
         }}>
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 500 }}>
