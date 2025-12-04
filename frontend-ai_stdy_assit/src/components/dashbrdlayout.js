@@ -1,14 +1,11 @@
-// src/components/dashbrdlayout.js (CORRECTED IMPORTS)
 
 import SidebarNav from './SidebarNav';
 import HeaderBar from './HeaderBar';
 import WidgetCard from './WidgetCard';
-// Add Typography and LinearProgress to this line
 import { Box, Grid, Button, TextField, LinearProgress, Typography } from '@mui/material'; 
 
 function DashboardLayout() {
   return (
-    // Main container using MUI Box
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
       <SidebarNav />
 
@@ -22,7 +19,6 @@ function DashboardLayout() {
           {/* The Widget Grid: using MUI Grid for professional responsiveness */}
           <Grid container spacing={3}>
             
-            {/* 1. Doubt Solver Widget (Main Feature - takes up more space) */}
             <Grid item xs={12} md={7}>
               <WidgetCard title="🧠 Ask a Doubt" minHeight={300}>
                 <Box sx={{ mt: 2 }}>
