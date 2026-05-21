@@ -1,0 +1,88 @@
+/* ============================================
+   LAYOUT — Main Application Structure
+   ============================================ */
+
+.layout {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.layout__main {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--topbar-height);
+  min-height: calc(100vh - var(--topbar-height));
+  transition: margin-left var(--transition-slow);
+  position: relative;
+  z-index: 1;
+}
+
+.layout__main--sidebar-collapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.layout__content {
+  padding: var(--space-8);
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* ── Decorative Background Orbs ── */
+.layout__bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.layout__bg-orb--1 {
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+  top: -15vw;
+  right: -10vw;
+  animation: float 30s ease-in-out infinite;
+}
+
+.layout__bg-orb--2 {
+  width: 35vw;
+  height: 35vw;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, transparent 70%);
+  bottom: -10vw;
+  left: 10vw;
+  animation: float 25s ease-in-out infinite reverse;
+}
+
+.layout__bg-orb--3 {
+  width: 25vw;
+  height: 25vw;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+  top: 40vh;
+  left: 30vw;
+  animation: float 35s ease-in-out infinite;
+  animation-delay: -15s;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .layout__main {
+    margin-left: 0;
+  }
+
+  .layout__main--sidebar-collapsed {
+    margin-left: 0;
+  }
+
+  .layout__content {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .layout__content {
+    padding: var(--space-3);
+  }
+}
