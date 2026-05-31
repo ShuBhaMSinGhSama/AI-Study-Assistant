@@ -2,17 +2,24 @@
 // API Service Layer — AI Study Assistant
 // ============================================
 
+import { getAccessToken } from './auth';
+
 const BASE_URL = 'http://localhost:8000/api';
 
 /**
- * Generic fetch wrapper with error handling
+ * Generic fetch wrapper with error handling and JWT auth
  */
 async function apiRequest(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
 
+  // Auto-inject auth token
+  const token = getAccessToken();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...options.headers,
     },
     ...options,
@@ -26,9 +33,22 @@ async function apiRequest(endpoint, options = {}) {
   try {
     const response = await fetch(url, config);
 
+    // DELETE returns 204 No Content
+    if (response.status === 204) {
+      return null;
+    }
+
+    // Handle 401 — token expired
+    if (response.status === 401) {
+      const errorData = await response.json().catch(() => ({}));
+      const err = new Error(errorData.detail || 'Session expired. Please log in again.');
+      err.status = 401;
+      throw err;
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.detail || errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return await response.json();
@@ -47,29 +67,41 @@ export async function fetchStatus() {
 
 // ── Dashboard ──
 export async function fetchDashboardStats() {
-  return apiRequest('/dashboard/stats/');
+  return apiRequest('/dashboard/');
 }
 
-// ── Materials ──
-export async function fetchMaterials(params = {}) {
-  const query = new URLSearchParams(params).toString();
-  const endpoint = query ? `/materials/?${query}` : '/materials/';
-  return apiRequest(endpoint);
+// ── Study Materials ──
+export async function fetchMaterials() {
+  return apiRequest('/study-materials/');
 }
 
 export async function fetchMaterial(id) {
-  return apiRequest(`/materials/${id}/`);
+  return apiRequest(`/study-materials/${id}/`);
 }
 
-export async function createMaterial(formData) {
-  return apiRequest('/materials/', {
+export async function createMaterial(data) {
+  // Support both FormData (file upload) and JSON
+  if (data instanceof FormData) {
+    return apiRequest('/study-materials/', {
+      method: 'POST',
+      body: data,
+    });
+  }
+  return apiRequest('/study-materials/', {
     method: 'POST',
-    body: formData,
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateMaterial(id, data) {
+  return apiRequest(`/study-materials/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 }
 
 export async function deleteMaterial(id) {
-  return apiRequest(`/materials/${id}/`, {
+  return apiRequest(`/study-materials/${id}/`, {
     method: 'DELETE',
   });
 }
@@ -105,49 +137,71 @@ export async function deleteFlashcard(id) {
   });
 }
 
-// ── Sessions ──
-export async function fetchSessions(params = {}) {
-  const query = new URLSearchParams(params).toString();
-  const endpoint = query ? `/sessions/?${query}` : '/sessions/';
-  return apiRequest(endpoint);
+export async function generateFlashcards(studyMaterialId, numCards = 10) {
+  return apiRequest('/generate-flashcards/', {
+    method: 'POST',
+    body: JSON.stringify({
+      study_material_id: studyMaterialId,
+      num_cards: numCards,
+    }),
+  });
+}
+
+// ── Study Sessions ──
+export async function fetchSessions() {
+  return apiRequest('/study-sessions/');
+}
+
+export async function fetchSession(id) {
+  return apiRequest(`/study-sessions/${id}/`);
 }
 
 export async function createSession(data) {
-  return apiRequest('/sessions/', {
+  return apiRequest('/study-sessions/', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function updateSession(id, data) {
-  return apiRequest(`/sessions/${id}/`, {
+  return apiRequest(`/study-sessions/${id}/`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 }
 
+export async function deleteSession(id) {
+  return apiRequest(`/study-sessions/${id}/`, {
+    method: 'DELETE',
+  });
+}
+
 // ── Chat ──
+export async function sendChatMessage(data) {
+  return apiRequest('/chat/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function fetchChatMessages(sessionId) {
   const endpoint = sessionId
-    ? `/chat/messages/?session=${sessionId}`
-    : '/chat/messages/';
+    ? `/chat-messages/?session_id=${sessionId}`
+    : '/chat-messages/';
   return apiRequest(endpoint);
 }
 
-export async function sendChatMessage(data) {
-  return apiRequest('/chat/send/', {
+// ── Spaced Repetition ──
+export async function reviewFlashcard(flashcardId, quality) {
+  return apiRequest('/review-flashcard/', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      flashcard_id: flashcardId,
+      quality: quality,
+    }),
   });
 }
 
-export async function fetchChatSessions() {
-  return apiRequest('/chat/sessions/');
-}
-
-export async function createChatSession(data) {
-  return apiRequest('/chat/sessions/', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+export async function fetchDueFlashcards() {
+  return apiRequest('/due-flashcards/');
 }

@@ -1,15 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchStatus } from '../services/api'
+import { fetchStatus, fetchDashboardStats } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import './Dashboard.css'
-
-// Mock data
-const statsData = [
-  { id: 1, icon: '📚', count: 24, label: 'Total Materials', trend: '+3', trendUp: true },
-  { id: 2, icon: '🎴', count: 156, label: 'Flashcards Created', trend: '+12', trendUp: true },
-  { id: 3, icon: '⏱️', count: 47, label: 'Study Hours', trend: '+5.2', trendUp: true },
-  { id: 4, icon: '💬', count: 38, label: 'Chat Sessions', trend: '+8', trendUp: true },
-]
 
 const quickActions = [
   {
@@ -38,6 +31,7 @@ const quickActions = [
   },
 ]
 
+// TODO: Replace with real activity feed API when available
 const recentActivity = [
   { id: 1, icon: '📄', text: 'Uploaded "Machine Learning Chapter 5.pdf"', time: '2 min ago', color: 'var(--accent-primary)' },
   { id: 2, icon: '🎴', text: 'Created 8 flashcards for Neural Networks', time: '15 min ago', color: 'var(--accent-secondary)' },
@@ -46,10 +40,27 @@ const recentActivity = [
   { id: 5, icon: '📈', text: 'Study session: 45 min on Data Structures', time: '5 hours ago', color: 'var(--color-info)' },
 ]
 
+/**
+ * Build the 4 stat-card objects from the dashboard API response.
+ * Falls back to all-zero values when stats is null (loading / error).
+ */
+function buildStatsData(stats) {
+  const s = stats || { total_materials: 0, total_flashcards: 0, total_sessions: 0, total_chat_messages: 0 }
+  return [
+    { id: 1, icon: '📚', count: s.total_materials,     label: 'Total Materials' },
+    { id: 2, icon: '🎴', count: s.total_flashcards,    label: 'Flashcards Created' },
+    { id: 3, icon: '⏱️', count: s.total_sessions,      label: 'Study Sessions' },
+    { id: 4, icon: '💬', count: s.total_chat_messages,  label: 'Chat Messages' },
+  ]
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [backendStatus, setBackendStatus] = useState(null)
   const [statusLoading, setStatusLoading] = useState(true)
+  const [stats, setStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(true)
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -62,8 +73,23 @@ export default function Dashboard() {
         setStatusLoading(false)
       }
     }
+
+    const loadDashboard = async () => {
+      try {
+        const dashData = await fetchDashboardStats()
+        setStats(dashData)
+      } catch {
+        setStats(null)
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+
     checkStatus()
+    loadDashboard()
   }, [])
+
+  const statsData = buildStatsData(stats)
 
   return (
     <div className="dashboard">
@@ -71,7 +97,7 @@ export default function Dashboard() {
       <div className="dashboard__welcome animate-fade-in">
         <div className="dashboard__welcome-text">
           <h1 className="dashboard__greeting">
-            Welcome back, <span className="gradient-text">Student</span> 👋
+            Welcome back, <span className="gradient-text">{user?.username || 'Student'}</span> 👋
           </h1>
           <p className="dashboard__subtitle">
             Here&apos;s your learning progress overview. Keep up the great work!
@@ -94,11 +120,15 @@ export default function Dashboard() {
           >
             <div className="dashboard__stat-header">
               <span className="dashboard__stat-icon">{stat.icon}</span>
-              <span className={`dashboard__stat-trend ${stat.trendUp ? 'up' : 'down'}`}>
-                {stat.trendUp ? '↑' : '↓'} {stat.trend}
-              </span>
+              {statsLoading && (
+                <span className="dashboard__stat-trend up" style={{ opacity: 0.4 }}>
+                  …
+                </span>
+              )}
             </div>
-            <div className="dashboard__stat-count">{stat.count}</div>
+            <div className="dashboard__stat-count" style={statsLoading ? { opacity: 0.4 } : undefined}>
+              {stat.count}
+            </div>
             <div className="dashboard__stat-label">{stat.label}</div>
             <div className="dashboard__stat-bar">
               <div
@@ -131,7 +161,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — mock data (no activity feed API yet) */}
       <section className="dashboard__section animate-fade-in stagger-6">
         <h2 className="dashboard__section-title">Recent Activity</h2>
         <div className="dashboard__activity glass-card">

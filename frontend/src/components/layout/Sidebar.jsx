@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import './Sidebar.css'
 
 const navItems = [
@@ -7,11 +8,22 @@ const navItems = [
   { path: '/chat', label: 'AI Chat', icon: '💬' },
   { path: '/materials', label: 'Materials', icon: '📚' },
   { path: '/flashcards', label: 'Flashcards', icon: '🎴' },
+  { path: '/review', label: 'Review', icon: '📖' },
   { path: '/sessions', label: 'Sessions', icon: '📈' },
 ]
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const displayName = user?.username || 'Student'
+  const avatarInitial = displayName.charAt(0).toUpperCase()
 
   return (
     <>
@@ -72,17 +84,38 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           <div className="sidebar__divider" />
           <div className="sidebar__user">
             <div className="sidebar__avatar">
-              <span>S</span>
+              <span>{avatarInitial}</span>
             </div>
             {!collapsed && (
               <div className="sidebar__user-info">
-                <span className="sidebar__user-name">Student</span>
+                <span className="sidebar__user-name">{displayName}</span>
                 <span className="sidebar__user-status">● Online</span>
               </div>
             )}
           </div>
+          <button
+            className="sidebar__logout-btn"
+            onClick={handleLogout}
+            title="Sign out"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.5rem',
+              borderRadius: 'var(--radius-md, 0.5rem)',
+              color: 'var(--text-secondary)',
+              fontSize: '1.1rem',
+              transition: 'color 0.2s, background 0.2s',
+              marginLeft: collapsed ? 0 : 'auto',
+            }}
+            onMouseEnter={(e) => { e.target.style.color = '#ef4444'; e.target.style.background = 'rgba(239,68,68,0.1)' }}
+            onMouseLeave={(e) => { e.target.style.color = 'var(--text-secondary)'; e.target.style.background = 'none' }}
+          >
+            🚪
+          </button>
         </div>
       </aside>
     </>
   )
 }
+

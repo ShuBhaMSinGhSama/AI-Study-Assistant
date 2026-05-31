@@ -1,29 +1,147 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchSessions, createSession, deleteSession } from '../services/api'
 import './Sessions.css'
 
-const mockSessions = [
-  { id: 1, title: 'Neural Networks Deep Dive', date: '2024-01-15', duration: '1h 25m', durationMins: 85, notes: 'Covered backpropagation, activation functions, and loss optimization. Reviewed 3 chapters.', flashcardsReviewed: 24, accuracy: 88 },
-  { id: 2, title: 'Data Structures Review', date: '2024-01-14', duration: '45m', durationMins: 45, notes: 'Practiced binary tree traversals and hash table implementations. Good progress.', flashcardsReviewed: 15, accuracy: 92 },
-  { id: 3, title: 'Linear Algebra Practice', date: '2024-01-13', duration: '1h 10m', durationMins: 70, notes: 'Matrix operations, eigenvalue computation, and vector space problems.', flashcardsReviewed: 20, accuracy: 75 },
-  { id: 4, title: 'Python Algorithms', date: '2024-01-12', duration: '55m', durationMins: 55, notes: 'Implemented sorting algorithms from scratch. Compared time complexities.', flashcardsReviewed: 12, accuracy: 95 },
-  { id: 5, title: 'Statistics Fundamentals', date: '2024-01-11', duration: '1h 30m', durationMins: 90, notes: 'Probability distributions, hypothesis testing basics, and confidence intervals.', flashcardsReviewed: 30, accuracy: 82 },
-]
-
-const weeklyData = [
-  { day: 'Mon', hours: 2.5 },
-  { day: 'Tue', hours: 1.8 },
-  { day: 'Wed', hours: 3.2 },
-  { day: 'Thu', hours: 0.5 },
-  { day: 'Fri', hours: 2.1 },
-  { day: 'Sat', hours: 4.0 },
-  { day: 'Sun', hours: 1.5 },
-]
-
-const maxHours = Math.max(...weeklyData.map(d => d.hours))
-const totalWeekHours = weeklyData.reduce((sum, d) => sum + d.hours, 0)
-
 export default function Sessions() {
+  const [sessions, setSessions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createForm, setCreateForm] = useState({ title: '', duration_minutes: 30, notes: '', date: new Date().toISOString().split('T')[0] })
+  const [creating, setCreating] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
+
+  useEffect(() => {
+    loadSessions()
+  }, [])
+
+  const loadSessions = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await fetchSessions()
+      setSessions(data.results || data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    setCreating(true)
+    try {
+      await createSession(createForm)
+      setShowCreateModal(false)
+      setCreateForm({ title: '', duration_minutes: 30, notes: '', date: new Date().toISOString().split('T')[0] })
+      loadSessions()
+    } catch (err) {
+      alert('Failed to log session: ' + err.message)
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this session?')) return
+    try {
+      await deleteSession(id)
+      loadSessions()
+    } catch (err) {
+      alert('Failed to delete session: ' + err.message)
+    }
+  }
+
+  const formatDuration = (mins) => {
+    if (!mins) return '0m'
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60)
+      const m = mins % 60
+      return m > 0 ? `${h}h ${m}m` : `${h}h`
+    }
+    return `${mins}m`
+  }
+
+  // Compute weekly data from sessions
+  const now = new Date()
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - now.getDay())
+  weekStart.setHours(0, 0, 0, 0)
+
+  const weeklyMap = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 }
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  sessions.forEach(s => {
+    const sessionDate = new Date(s.date)
+    if (sessionDate >= weekStart) {
+      const dayName = dayNames[sessionDate.getDay()]
+      weeklyMap[dayName] += (s.duration_minutes || 0) / 60
+    }
+  })
+
+  const orderedDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const weeklyDataOrdered = orderedDays.map(d => ({ day: d, hours: Math.round((weeklyMap[d] || 0) * 10) / 10 }))
+  const maxHours = Math.max(...weeklyDataOrdered.map(d => d.hours), 0.1)
+  const totalWeekHours = weeklyDataOrdered.reduce((sum, d) => sum + d.hours, 0)
+
+  // Summary stats
+  const totalSessions = sessions.length
+  const avgDuration = totalSessions > 0 ? Math.round(sessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) / totalSessions) : 0
+  const thisMonthSessions = sessions.filter(s => {
+    const d = new Date(s.date)
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+  }).length
+
+  // Filter sessions by tab
+  const filteredSessions = sessions.filter(session => {
+    if (activeTab === 'all') return true
+    const sessionDate = new Date(session.date)
+    if (activeTab === 'this week') {
+      return sessionDate >= weekStart
+    }
+    if (activeTab === 'this month') {
+      return sessionDate.getMonth() === now.getMonth() && sessionDate.getFullYear() === now.getFullYear()
+    }
+    return true
+  })
+
+  // Sort by date descending
+  const sortedSessions = [...filteredSessions].sort((a, b) => new Date(b.date) - new Date(a.date))
+
+  if (loading) {
+    return (
+      <div className="sessions">
+        <div className="sessions__header animate-fade-in">
+          <div>
+            <h1 className="sessions__title">Study Sessions</h1>
+            <p className="sessions__subtitle">Track your learning progress and study habits</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem 0' }}>
+          <div className="loading-spinner" />
+          <span style={{ marginLeft: '1rem', color: 'var(--text-secondary)' }}>Loading sessions...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="sessions">
+        <div className="sessions__header animate-fade-in">
+          <div>
+            <h1 className="sessions__title">Study Sessions</h1>
+            <p className="sessions__subtitle">Track your learning progress and study habits</p>
+          </div>
+        </div>
+        <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>⚠️ {error}</p>
+          <button className="btn btn-primary" onClick={loadSessions}>Retry</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="sessions">
@@ -33,7 +151,7 @@ export default function Sessions() {
           <h1 className="sessions__title">Study Sessions</h1>
           <p className="sessions__subtitle">Track your learning progress and study habits</p>
         </div>
-        <button className="btn btn-primary">+ New Session</button>
+        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>+ New Session</button>
       </div>
 
       {/* Summary Cards */}
@@ -46,24 +164,24 @@ export default function Sessions() {
           </div>
         </div>
         <div className="sessions__summary-card glass-card">
-          <div className="sessions__summary-icon">🔥</div>
+          <div className="sessions__summary-icon">📚</div>
           <div className="sessions__summary-data">
-            <span className="sessions__summary-value">5</span>
-            <span className="sessions__summary-label">Day Streak</span>
+            <span className="sessions__summary-value">{totalSessions}</span>
+            <span className="sessions__summary-label">Total Sessions</span>
           </div>
         </div>
         <div className="sessions__summary-card glass-card">
           <div className="sessions__summary-icon">🎯</div>
           <div className="sessions__summary-data">
-            <span className="sessions__summary-value">86%</span>
-            <span className="sessions__summary-label">Avg. Accuracy</span>
+            <span className="sessions__summary-value">{formatDuration(avgDuration)}</span>
+            <span className="sessions__summary-label">Avg Duration</span>
           </div>
         </div>
         <div className="sessions__summary-card glass-card">
-          <div className="sessions__summary-icon">🎴</div>
+          <div className="sessions__summary-icon">📅</div>
           <div className="sessions__summary-data">
-            <span className="sessions__summary-value">101</span>
-            <span className="sessions__summary-label">Cards Reviewed</span>
+            <span className="sessions__summary-value">{thisMonthSessions}</span>
+            <span className="sessions__summary-label">This Month</span>
           </div>
         </div>
       </div>
@@ -72,7 +190,7 @@ export default function Sessions() {
       <div className="sessions__chart glass-card animate-fade-in stagger-2">
         <h3 className="sessions__chart-title">Weekly Study Time</h3>
         <div className="sessions__chart-bars">
-          {weeklyData.map((d, i) => (
+          {weeklyDataOrdered.map((d, i) => (
             <div key={d.day} className="sessions__bar-group">
               <div className="sessions__bar-value">{d.hours}h</div>
               <div className="sessions__bar-track">
@@ -108,56 +226,114 @@ export default function Sessions() {
         </div>
 
         <div className="sessions__list">
-          {mockSessions.map((session, index) => (
-            <div
-              key={session.id}
-              className={`sessions__card glass-card-interactive animate-fade-in-up stagger-${Math.min(index + 4, 8)}`}
-            >
-              <div className="sessions__card-left">
-                <div className="sessions__card-date-badge">
-                  <span className="sessions__card-day">{new Date(session.date).getDate()}</span>
-                  <span className="sessions__card-month">{new Date(session.date).toLocaleString('default', { month: 'short' })}</span>
-                </div>
-              </div>
-              <div className="sessions__card-content">
-                <h4 className="sessions__card-title">{session.title}</h4>
-                <p className="sessions__card-notes">{session.notes}</p>
-                <div className="sessions__card-meta">
-                  <span className="sessions__card-meta-item">
-                    ⏱️ {session.duration}
-                  </span>
-                  <span className="sessions__card-meta-item">
-                    🎴 {session.flashcardsReviewed} cards
-                  </span>
-                  <span className="sessions__card-meta-item">
-                    🎯 {session.accuracy}%
-                  </span>
-                </div>
-              </div>
-              <div className="sessions__card-accuracy">
-                <div className="sessions__accuracy-ring">
-                  <svg viewBox="0 0 36 36" className="sessions__accuracy-svg">
-                    <path
-                      className="sessions__accuracy-bg"
-                      d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      className="sessions__accuracy-fill"
-                      strokeDasharray={`${session.accuracy}, 100`}
-                      d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
-                      style={{
-                        stroke: session.accuracy >= 90 ? 'var(--color-success)' :
-                                session.accuracy >= 75 ? 'var(--color-warning)' : 'var(--color-error)'
-                      }}
-                    />
-                  </svg>
-                  <span className="sessions__accuracy-text">{session.accuracy}%</span>
-                </div>
-              </div>
+          {sortedSessions.length === 0 ? (
+            <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-lg)', marginBottom: '0.5rem' }}>📭 No sessions found</p>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
+                {activeTab !== 'all' ? 'Try selecting a different time range or ' : ''}
+                Log your first study session to get started!
+              </p>
             </div>
-          ))}
+          ) : (
+            sortedSessions.map((session, index) => (
+              <div
+                key={session.id}
+                className={`sessions__card glass-card-interactive animate-fade-in-up stagger-${Math.min(index + 4, 8)}`}
+              >
+                <div className="sessions__card-left">
+                  <div className="sessions__card-date-badge">
+                    <span className="sessions__card-day">{new Date(session.date).getDate()}</span>
+                    <span className="sessions__card-month">{new Date(session.date).toLocaleString('default', { month: 'short' })}</span>
+                  </div>
+                </div>
+                <div className="sessions__card-content">
+                  <h4 className="sessions__card-title">{session.title}</h4>
+                  {session.notes && <p className="sessions__card-notes">{session.notes}</p>}
+                  <div className="sessions__card-meta">
+                    <span className="sessions__card-meta-item">
+                      ⏱️ {formatDuration(session.duration_minutes)}
+                    </span>
+                    <span className="sessions__card-meta-item">
+                      📅 {new Date(session.date).toLocaleDateString('default', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '0.4rem 0.75rem', fontSize: 'var(--text-xs)' }}
+                    onClick={() => handleDelete(session.id)}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      {/* Create Session Modal */}
+      {showCreateModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowCreateModal(false)}>
+          <div className="glass-card-strong" onClick={e => e.stopPropagation()} style={{
+            width: '100%', maxWidth: '500px', padding: '2rem',
+            borderRadius: 'var(--radius-xl)', margin: '1rem'
+          }}>
+            <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Log Study Session</h2>
+            <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input
+                className="input-glass"
+                placeholder="Session Title"
+                value={createForm.title}
+                onChange={e => setCreateForm(p => ({...p, title: e.target.value}))}
+                required
+                style={{ width: '100%' }}
+              />
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>Duration (minutes)</label>
+                  <input
+                    type="number"
+                    className="input-glass"
+                    min={1}
+                    value={createForm.duration_minutes}
+                    onChange={e => setCreateForm(p => ({...p, duration_minutes: parseInt(e.target.value) || 0}))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>Date</label>
+                  <input
+                    type="date"
+                    className="input-glass"
+                    value={createForm.date}
+                    onChange={e => setCreateForm(p => ({...p, date: e.target.value}))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+              <textarea
+                className="input-glass"
+                placeholder="Session notes..."
+                value={createForm.notes}
+                onChange={e => setCreateForm(p => ({...p, notes: e.target.value}))}
+                rows={3}
+                style={{ width: '100%', resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? 'Saving...' : 'Log Session'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

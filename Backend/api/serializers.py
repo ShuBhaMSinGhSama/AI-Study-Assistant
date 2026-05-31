@@ -11,9 +11,11 @@ class StudyMaterialSerializer(serializers.ModelSerializer):
         model = StudyMaterial
         fields = [
             'id', 'title', 'description', 'content', 'file_url',
+            'file', 'extracted_text',
             'material_type', 'flashcard_count', 'created_at', 'updated_at',
+            'owner',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'owner']
 
 
 class FlashcardSerializer(serializers.ModelSerializer):
@@ -21,9 +23,11 @@ class FlashcardSerializer(serializers.ModelSerializer):
         model = Flashcard
         fields = [
             'id', 'question', 'answer', 'difficulty',
-            'study_material', 'times_reviewed', 'last_reviewed', 'created_at',
+            'study_material', 'times_reviewed', 'last_reviewed',
+            'easiness_factor', 'interval_days', 'repetitions', 'next_review_date',
+            'created_at', 'owner',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'owner']
 
 
 class StudySessionSerializer(serializers.ModelSerializer):
@@ -31,12 +35,13 @@ class StudySessionSerializer(serializers.ModelSerializer):
         model = StudySession
         fields = [
             'id', 'title', 'duration_minutes', 'notes', 'date', 'created_at',
+            'owner',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'owner']
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
-        fields = ['id', 'role', 'content', 'session_id', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'role', 'content', 'session_id', 'created_at', 'owner']
+        read_only_fields = ['id', 'created_at', 'owner']

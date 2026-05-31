@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 import uuid
 
@@ -16,6 +17,8 @@ class StudyMaterial(models.Model):
     description = models.TextField(blank=True, default='')
     content = models.TextField(blank=True, default='')
     file_url = models.URLField(max_length=500, blank=True, default='')
+    file = models.FileField(upload_to='study_materials/', blank=True, null=True)
+    extracted_text = models.TextField(blank=True, default='')
     material_type = models.CharField(
         max_length=10,
         choices=MATERIAL_TYPE_CHOICES,
@@ -23,6 +26,13 @@ class StudyMaterial(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='study_materials',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ['-created_at']
@@ -57,7 +67,19 @@ class Flashcard(models.Model):
     )
     times_reviewed = models.PositiveIntegerField(default=0)
     last_reviewed = models.DateTimeField(null=True, blank=True)
+    # SM-2 Spaced Repetition fields
+    easiness_factor = models.FloatField(default=2.5)
+    interval_days = models.PositiveIntegerField(default=0)
+    repetitions = models.PositiveIntegerField(default=0)
+    next_review_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='flashcards_owned',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ['-created_at']
@@ -75,6 +97,13 @@ class StudySession(models.Model):
     notes = models.TextField(blank=True, default='')
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='study_sessions',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ['-date']
@@ -96,6 +125,13 @@ class ChatMessage(models.Model):
     content = models.TextField()
     session_id = models.UUIDField(default=uuid.uuid4, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='chat_messages',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ['created_at']

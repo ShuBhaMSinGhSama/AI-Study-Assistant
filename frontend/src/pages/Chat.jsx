@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
+import { sendChatMessage, fetchChatMessages } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import './Chat.css'
 
-const mockMessages = [
-  {
-    id: 1,
-    role: 'assistant',
-    content: "Hello! I'm your AI Study Assistant. I can help you understand concepts, answer questions from your materials, or quiz you on topics. What would you like to study today?",
-    timestamp: new Date(Date.now() - 300000),
-  },
-]
+const welcomeMessage = {
+  id: 'welcome',
+  role: 'assistant',
+  content: "Hello! I'm your AI Study Assistant. I can help you understand concepts, answer questions from your materials, or quiz you on topics. What would you like to study today?",
+  created_at: new Date().toISOString(),
+}
 
 const suggestedPrompts = [
   "📖 Explain the concept of Big O notation",
@@ -18,9 +18,11 @@ const suggestedPrompts = [
 ]
 
 export default function Chat() {
-  const [messages, setMessages] = useState(mockMessages)
+  const { user } = useAuth()
+  const [messages, setMessages] = useState([welcomeMessage])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [sessionId, setSessionId] = useState(null)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -34,30 +36,48 @@ export default function Chat() {
 
   const sendMessage = async (text) => {
     const messageText = text || input.trim()
-    if (!messageText) return
+    if (!messageText || isTyping) return
 
-    // Add user message
+    // Add user message to UI immediately
     const userMessage = {
       id: Date.now(),
       role: 'user',
       content: messageText,
-      timestamp: new Date(),
+      created_at: new Date().toISOString(),
     }
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsTyping(true)
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await sendChatMessage({
+        message: messageText,
+        session_id: sessionId || undefined,
+      })
+
+      // Save session_id for conversation continuity
+      if (response.session_id && !sessionId) {
+        setSessionId(response.session_id)
+      }
+
       const aiMessage = {
-        id: Date.now() + 1,
+        id: response.message_id || Date.now() + 1,
         role: 'assistant',
-        content: generateMockResponse(messageText),
-        timestamp: new Date(),
+        content: response.ai_response,
+        created_at: new Date().toISOString(),
       }
       setMessages(prev => [...prev, aiMessage])
+    } catch (err) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${err.message}. Please make sure the backend server is running.`,
+        created_at: new Date().toISOString(),
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
       setIsTyping(false)
-    }, 1500 + Math.random() * 1000)
+    }
   }
 
   const handleKeyDown = (e) => {
@@ -85,11 +105,11 @@ export default function Chat() {
               )}
               <div className={`chat__bubble chat__bubble--${msg.role}`}>
                 <p className="chat__bubble-text">{msg.content}</p>
-                <span className="chat__bubble-time">{formatTime(msg.timestamp)}</span>
+                <span className="chat__bubble-time">{formatTime(msg.created_at)}</span>
               </div>
               {msg.role === 'user' && (
                 <div className="chat__avatar chat__avatar--user">
-                  <span>S</span>
+                  <span>{user?.username?.charAt(0)?.toUpperCase() || 'U'}</span>
                 </div>
               )}
             </div>
@@ -157,12 +177,3 @@ export default function Chat() {
   )
 }
 
-// Mock response generator
-function generateMockResponse(input) {
-  const responses = [
-    "That's a great question! Let me break this down for you.\n\nThe concept you're asking about is fundamental to understanding this topic. Think of it as building blocks — each piece connects to form a larger picture.\n\nWould you like me to go into more detail on any specific aspect?",
-    "Based on your study materials, here's what I found:\n\nThis topic relates closely to what you've been studying. The key points to remember are:\n\n1. Start with the fundamentals\n2. Build upon each concept progressively\n3. Practice with real-world examples\n\nShall I create some flashcards to help you memorize these points?",
-    "Let me help you understand this better!\n\nThe core idea here is about establishing connections between concepts. When you grasp the underlying principles, everything becomes clearer.\n\nI'd recommend reviewing your notes on this topic and then we can do a quick quiz to test your understanding. Ready?",
-  ]
-  return responses[Math.floor(Math.random() * responses.length)]
-}

@@ -1,0 +1,8 @@
+Django>=5.2
+djangorestframework
+django-cors-headers
+django-environ
+google-generativeai
+pdfplumber
+djangorestframework-simplejwt
+PyPDF2
