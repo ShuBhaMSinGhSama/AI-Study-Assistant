@@ -6,3 +6,7 @@ google-generativeai
 pdfplumber
 djangorestframework-simplejwt
 PyPDF2
+gunicorn
+psycopg2-binary
+whitenoise
+dj-database-url

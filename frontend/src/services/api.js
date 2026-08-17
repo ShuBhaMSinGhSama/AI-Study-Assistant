@@ -4,7 +4,7 @@
 
 import { getAccessToken } from './auth';
 
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 /**
  * Generic fetch wrapper with error handling and JWT auth
@@ -68,6 +68,10 @@ export async function fetchStatus() {
 // ── Dashboard ──
 export async function fetchDashboardStats() {
   return apiRequest('/dashboard/');
+}
+
+export async function fetchActivityFeed() {
+  return apiRequest('/activity-feed/');
 }
 
 // ── Study Materials ──

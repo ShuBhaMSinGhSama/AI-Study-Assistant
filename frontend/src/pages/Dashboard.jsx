@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchStatus, fetchDashboardStats } from '../services/api'
+import { fetchStatus, fetchDashboardStats, fetchActivityFeed } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import './Dashboard.css'
 
@@ -31,15 +31,6 @@ const quickActions = [
   },
 ]
 
-// TODO: Replace with real activity feed API when available
-const recentActivity = [
-  { id: 1, icon: '📄', text: 'Uploaded "Machine Learning Chapter 5.pdf"', time: '2 min ago', color: 'var(--accent-primary)' },
-  { id: 2, icon: '🎴', text: 'Created 8 flashcards for Neural Networks', time: '15 min ago', color: 'var(--accent-secondary)' },
-  { id: 3, icon: '💬', text: 'AI chat session on Linear Algebra', time: '1 hour ago', color: 'var(--accent-emerald)' },
-  { id: 4, icon: '✅', text: 'Completed flashcard review — 92% accuracy', time: '3 hours ago', color: 'var(--color-success)' },
-  { id: 5, icon: '📈', text: 'Study session: 45 min on Data Structures', time: '5 hours ago', color: 'var(--color-info)' },
-]
-
 /**
  * Build the 4 stat-card objects from the dashboard API response.
  * Falls back to all-zero values when stats is null (loading / error).
@@ -61,6 +52,8 @@ export default function Dashboard() {
   const [statusLoading, setStatusLoading] = useState(true)
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [recentActivity, setRecentActivity] = useState([])
+  const [activityLoading, setActivityLoading] = useState(true)
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -85,8 +78,20 @@ export default function Dashboard() {
       }
     }
 
+    const loadActivityFeed = async () => {
+      try {
+        const data = await fetchActivityFeed()
+        setRecentActivity(data.activities || [])
+      } catch {
+        setRecentActivity([])
+      } finally {
+        setActivityLoading(false)
+      }
+    }
+
     checkStatus()
     loadDashboard()
+    loadActivityFeed()
   }, [])
 
   const statsData = buildStatsData(stats)
@@ -161,21 +166,31 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Recent Activity — mock data (no activity feed API yet) */}
+      {/* Recent Activity */}
       <section className="dashboard__section animate-fade-in stagger-6">
         <h2 className="dashboard__section-title">Recent Activity</h2>
         <div className="dashboard__activity glass-card">
-          {recentActivity.map((item, index) => (
-            <div key={item.id} className="dashboard__activity-item" style={{ animationDelay: `${index * 0.06}s` }}>
-              <div className="dashboard__activity-icon" style={{ background: `${item.color}22`, color: item.color }}>
-                {item.icon}
-              </div>
-              <div className="dashboard__activity-content">
-                <p className="dashboard__activity-text">{item.text}</p>
-                <span className="dashboard__activity-time">{item.time}</span>
-              </div>
+          {activityLoading ? (
+            <div className="dashboard__activity-empty" style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+              Loading activity feed...
             </div>
-          ))}
+          ) : recentActivity.length === 0 ? (
+            <div className="dashboard__activity-empty" style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
+              No recent activity found. Start studying to see your feed!
+            </div>
+          ) : (
+            recentActivity.map((item, index) => (
+              <div key={item.id} className="dashboard__activity-item" style={{ animationDelay: `${index * 0.06}s` }}>
+                <div className="dashboard__activity-icon" style={{ background: `${item.color}22`, color: item.color }}>
+                  {item.icon}
+                </div>
+                <div className="dashboard__activity-content">
+                  <p className="dashboard__activity-text">{item.text}</p>
+                  <span className="dashboard__activity-time">{item.time}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

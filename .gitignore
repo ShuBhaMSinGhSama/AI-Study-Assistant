@@ -1,3 +1,39 @@
+# =============================================
+# Project-specific ignores
+# =============================================
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+!.env.production
+
+# Database
+*.sqlite3
+
+# Media uploads (user files)
+media/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Python virtual environment
+AI_stdy_venv/
+venv/
+.venv/
+
+# Test artifacts
+test_api.py
+
+# IDE
+.vscode/
+.idea/
+
+# =============================================
+# Standard Python gitignore
+# =============================================
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

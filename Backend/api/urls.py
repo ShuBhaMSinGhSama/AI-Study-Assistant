@@ -15,6 +15,7 @@ from .views import (
     FlashcardViewSet,
     StudySessionViewSet,
     ChatMessageViewSet,
+    activity_feed,
 )
 
 router = DefaultRouter()
@@ -30,6 +31,7 @@ urlpatterns = [
     # Custom endpoints
     path('chat/', chat_with_ai, name='chat_with_ai'),
     path('dashboard/', dashboard_stats, name='dashboard_stats'),
+    path('activity-feed/', activity_feed, name='activity_feed'),
     path('generate-flashcards/', generate_flashcards_view, name='generate_flashcards'),
     path('review-flashcard/', review_flashcard, name='review_flashcard'),
     path('due-flashcards/', due_flashcards, name='due_flashcards'),

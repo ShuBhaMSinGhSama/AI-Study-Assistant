@@ -56,8 +56,17 @@ class StudyMaterialViewSet(viewsets.ModelViewSet):
                             text_parts.append(page_text)
                 instance.extracted_text = '\n\n'.join(text_parts)
                 instance.save(update_fields=['extracted_text'])
-            except Exception:
-                pass  # Silently fail text extraction
+            except Exception as e:
+                import os
+                from rest_framework.exceptions import ValidationError
+                
+                if instance.file and os.path.isfile(instance.file.path):
+                    os.remove(instance.file.path)
+                instance.delete()
+                
+                raise ValidationError({
+                    "file": f"Failed to extract text from PDF. The file may be corrupted or image-based. ({str(e)})"
+                })
 
 
 class FlashcardViewSet(viewsets.ModelViewSet):
@@ -400,3 +409,76 @@ def due_flashcards(request):
         "results": serializer.data,
     })
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def activity_feed(request):
+    """
+    Returns an aggregated list of recent user activities.
+    """
+    from django.utils.timesince import timesince
+    user = request.user
+    activities = []
+    
+    # 1. Study Materials
+    materials = StudyMaterial.objects.filter(owner=user).order_by('-created_at')[:5]
+    for m in materials:
+        activities.append({
+            'id': f"mat_{m.id}",
+            'icon': '📄',
+            'text': f'Uploaded "{m.title}"',
+            'timestamp': m.created_at,
+            'time': f"{timesince(m.created_at)} ago",
+            'color': 'var(--accent-primary)'
+        })
+
+    # 2. Flashcards Created
+    flashcards = Flashcard.objects.filter(owner=user).order_by('-created_at')[:5]
+    for f in flashcards:
+        mat_title = f.study_material.title if f.study_material else "General"
+        activities.append({
+            'id': f"fc_{f.id}",
+            'icon': '🎴',
+            'text': f'Created flashcard for "{mat_title}"',
+            'timestamp': f.created_at,
+            'time': f"{timesince(f.created_at)} ago",
+            'color': 'var(--accent-secondary)'
+        })
+
+    # 3. Study Sessions
+    sessions = StudySession.objects.filter(owner=user).order_by('-created_at')[:5]
+    for s in sessions:
+        activities.append({
+            'id': f"ses_{s.id}",
+            'icon': '📈',
+            'text': f'Study session: {s.duration_minutes} min on "{s.title}"',
+            'timestamp': s.created_at,
+            'time': f"{timesince(s.created_at)} ago",
+            'color': 'var(--color-info)'
+        })
+
+    # 4. Chat Messages
+    chats = ChatMessage.objects.filter(owner=user, role='user').order_by('-created_at')[:5]
+    for c in chats:
+        activities.append({
+            'id': f"chat_{c.id}",
+            'icon': '💬',
+            'text': f'AI chat: "{c.content[:30]}..."',
+            'timestamp': c.created_at,
+            'time': f"{timesince(c.created_at)} ago",
+            'color': 'var(--accent-emerald)'
+        })
+
+    # Sort all by timestamp descending
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    # Take top 10
+    top_activities = activities[:10]
+    
+    # Remove timestamp object for JSON serialization
+    for act in top_activities:
+        del act['timestamp']
+
+    return Response({
+        "activities": top_activities
+    })
