@@ -125,22 +125,24 @@ export default function Dashboard() {
           >
             <div className="dashboard__stat-header">
               <span className="dashboard__stat-icon">{stat.icon}</span>
-              {statsLoading && (
-                <span className="dashboard__stat-trend up" style={{ opacity: 0.4 }}>
-                  …
-                </span>
-              )}
             </div>
-            <div className="dashboard__stat-count" style={statsLoading ? { opacity: 0.4 } : undefined}>
-              {stat.count}
-            </div>
-            <div className="dashboard__stat-label">{stat.label}</div>
-            <div className="dashboard__stat-bar">
-              <div
-                className="dashboard__stat-bar-fill"
-                style={{ width: `${Math.min(stat.count / 2, 100)}%` }}
-              />
-            </div>
+            {statsLoading ? (
+              <>
+                <div className="skeleton skeleton-title" style={{ marginTop: '0.5rem', width: '50%' }}></div>
+                <div className="skeleton skeleton-text" style={{ width: '80%' }}></div>
+              </>
+            ) : (
+              <>
+                <div className="dashboard__stat-count">{stat.count}</div>
+                <div className="dashboard__stat-label">{stat.label}</div>
+                <div className="dashboard__stat-bar">
+                  <div
+                    className="dashboard__stat-bar-fill"
+                    style={{ width: `${Math.min(stat.count / 2, 100)}%` }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>

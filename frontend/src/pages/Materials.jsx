@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchMaterials, createMaterial, deleteMaterial } from '../services/api'
+import { showToast } from '../components/Toast'
 import './Materials.css'
 
 const typeIcons = { pdf: '📄', note: '📝', link: '🔗' }
@@ -17,16 +18,33 @@ export default function Materials() {
   const [createForm, setCreateForm] = useState({ title: '', description: '', content: '', material_type: 'note' })
   const [creating, setCreating] = useState(false)
   const [uploadFile, setUploadFile] = useState(null)
+  
+  // Pagination
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
 
   useEffect(() => {
-    loadMaterials()
-  }, [])
+    loadMaterials(page)
+  }, [page])
 
-  const loadMaterials = async () => {
+  const loadMaterials = async (pageNumber = 1) => {
     try {
       setLoading(true)
-      const data = await fetchMaterials()
-      setMaterials(data.results || data)
+      const data = await fetchMaterials({ page: pageNumber })
+      
+      if (data.results) {
+        setMaterials(data.results)
+        setHasNext(!!data.next)
+        setHasPrev(!!data.previous)
+        setTotalPages(Math.ceil(data.count / 50)) // 50 is DRF PAGE_SIZE
+      } else {
+        setMaterials(data)
+        setHasNext(false)
+        setHasPrev(false)
+        setTotalPages(1)
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -55,7 +73,7 @@ export default function Materials() {
       setUploadFile(null)
       loadMaterials()
     } catch (err) {
-      alert('Failed to create: ' + err.message)
+      showToast('Failed to create: ' + err.message, 'error')
     } finally {
       setCreating(false)
     }
@@ -67,7 +85,7 @@ export default function Materials() {
       await deleteMaterial(id)
       setMaterials(prev => prev.filter(m => m.id !== id))
     } catch (err) {
-      alert('Failed to delete: ' + err.message)
+      showToast('Failed to delete: ' + err.message, 'error')
     }
   }
 
@@ -156,9 +174,15 @@ export default function Materials() {
 
       {/* Loading State */}
       {loading && (
-        <div className="materials__empty animate-fade-in">
-          <span className="materials__empty-icon">⏳</span>
-          <h3>Loading materials...</h3>
+        <div className={`materials__grid ${viewMode === 'list' ? 'materials__grid--list' : ''}`}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="materials__card glass-card skeleton-card">
+              <div className="skeleton skeleton-title" style={{ width: '40%' }}></div>
+              <div className="skeleton skeleton-text"></div>
+              <div className="skeleton skeleton-text" style={{ width: '80%' }}></div>
+              <div className="skeleton skeleton-text" style={{ width: '60%', marginTop: '1rem' }}></div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -207,6 +231,29 @@ export default function Materials() {
           <span className="materials__empty-icon">📭</span>
           <h3>{materials.length === 0 ? 'No materials yet' : 'No materials found'}</h3>
           <p>{materials.length === 0 ? 'Upload your first study material to get started!' : 'Try adjusting your search or filters'}</p>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="materials__pagination" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>
+          <button 
+            className="btn btn-secondary" 
+            disabled={!hasPrev} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </button>
+          <span style={{ alignSelf: 'center', color: 'var(--text-secondary)' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button 
+            className="btn btn-secondary" 
+            disabled={!hasNext} 
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          >
+            Next
+          </button>
         </div>
       )}
 

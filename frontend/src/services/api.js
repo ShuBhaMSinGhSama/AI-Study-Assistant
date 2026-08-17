@@ -3,6 +3,7 @@
 // ============================================
 
 import { getAccessToken } from './auth';
+import { showToast } from '../components/Toast';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -43,18 +44,35 @@ async function apiRequest(endpoint, options = {}) {
       const errorData = await response.json().catch(() => ({}));
       const err = new Error(errorData.detail || 'Session expired. Please log in again.');
       err.status = 401;
+      if (!options.silent) showToast(err.message, 'error');
       throw err;
     }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      // If it's a validation error (e.g. dict of field errors), format it
+      let errorMsg = errorData.detail || errorData.error || errorData.message;
+      if (!errorMsg && typeof errorData === 'object') {
+        const firstKey = Object.keys(errorData)[0];
+        if (firstKey) errorMsg = Array.isArray(errorData[firstKey]) ? errorData[firstKey][0] : errorData[firstKey];
+      }
+      errorMsg = errorMsg || `HTTP ${response.status}: ${response.statusText}`;
+      
+      const err = new Error(errorMsg);
+      if (!options.silent) showToast(errorMsg, 'error');
+      throw err;
     }
 
     return await response.json();
   } catch (error) {
     if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-      throw new Error('Unable to connect to the server. Is the backend running?');
+      const msg = 'Unable to connect to the server. Is the backend running?';
+      if (!options.silent) showToast(msg, 'error');
+      throw new Error(msg);
+    }
+    // If we haven't shown it yet and it's not silent
+    if (!options.silent && !error.status) {
+      showToast(error.message, 'error');
     }
     throw error;
   }
@@ -64,6 +82,7 @@ async function apiRequest(endpoint, options = {}) {
 export async function fetchStatus() {
   return apiRequest('/status/');
 }
+
 
 // ── Dashboard ──
 export async function fetchDashboardStats() {
@@ -75,8 +94,10 @@ export async function fetchActivityFeed() {
 }
 
 // ── Study Materials ──
-export async function fetchMaterials() {
-  return apiRequest('/study-materials/');
+export async function fetchMaterials(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const endpoint = query ? `/study-materials/?${query}` : '/study-materials/';
+  return apiRequest(endpoint);
 }
 
 export async function fetchMaterial(id) {

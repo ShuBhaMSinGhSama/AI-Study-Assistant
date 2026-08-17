@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchFlashcards, createFlashcard, deleteFlashcard, updateFlashcard, fetchMaterials, generateFlashcards } from '../services/api'
+import { showToast } from '../components/Toast'
 import './Flashcards.css'
 
 const difficultyColors = {
@@ -27,16 +28,35 @@ export default function Flashcards() {
   const [generating, setGenerating] = useState(false)
   const [numCards, setNumCards] = useState(10)
 
-  useEffect(() => {
-    loadFlashcards()
-  }, [])
+  // Pagination
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
 
-  const loadFlashcards = async () => {
+  useEffect(() => {
+    loadFlashcards(page)
+  }, [page])
+
+  const loadFlashcards = async (pageNumber = 1) => {
     try {
       setLoading(true)
       setError(null)
-      const data = await fetchFlashcards()
-      setFlashcards(data.results || data)
+      const data = await fetchFlashcards({ page: pageNumber })
+      
+      if (data.results) {
+        setFlashcards(data.results)
+        setHasNext(!!data.next)
+        setHasPrev(!!data.previous)
+        setTotalPages(Math.ceil(data.count / 50)) // 50 is DRF PAGE_SIZE
+      } else {
+        setFlashcards(data)
+        setHasNext(false)
+        setHasPrev(false)
+        setTotalPages(1)
+      }
+      setCurrentIndex(0)
+      setIsFlipped(false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -84,7 +104,7 @@ export default function Flashcards() {
         setTimeout(() => setCurrentIndex(prev => prev + 1), 300)
       }
     } catch (err) {
-      alert('Failed to update: ' + err.message)
+      showToast('Failed to update: ' + err.message, 'error')
     }
   }
 
@@ -98,7 +118,7 @@ export default function Flashcards() {
         setCurrentIndex(prev => prev - 1)
       }
     } catch (err) {
-      alert('Failed to delete: ' + err.message)
+      showToast('Failed to delete: ' + err.message, 'error')
     }
   }
 
@@ -111,7 +131,7 @@ export default function Flashcards() {
       setCreateForm({ question: '', answer: '', difficulty: 'medium' })
       loadFlashcards()
     } catch (err) {
-      alert('Failed to create: ' + err.message)
+      showToast('Failed to create: ' + err.message, 'error')
     } finally {
       setCreating(false)
     }
@@ -125,9 +145,9 @@ export default function Flashcards() {
       setShowGenerateModal(false)
       setSelectedMaterialId('')
       loadFlashcards()
-      alert(`Successfully generated ${result.generated || result.count || numCards} flashcards!`)
+      showToast(`Successfully generated ${result.generated || result.count || numCards} flashcards!`, 'success')
     } catch (err) {
-      alert('Failed to generate: ' + err.message)
+      showToast('Failed to generate: ' + err.message, 'error')
     } finally {
       setGenerating(false)
     }
@@ -311,6 +331,29 @@ export default function Flashcards() {
               <span className="flashcards__grid-card-cta">Click to study →</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && !error && totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>
+          <button 
+            className="btn btn-secondary" 
+            disabled={!hasPrev} 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            ← Previous
+          </button>
+          <span style={{ alignSelf: 'center', color: 'var(--text-secondary)' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button 
+            className="btn btn-secondary" 
+            disabled={!hasNext} 
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          >
+            Next →
+          </button>
         </div>
       )}
 

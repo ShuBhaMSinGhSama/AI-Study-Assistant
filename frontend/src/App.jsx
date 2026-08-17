@@ -11,9 +11,13 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import './App.css'
 
+import ToastContainer from './components/Toast'
+
 function App() {
   return (
-    <Routes>
+    <>
+      <ToastContainer />
+      <Routes>
       {/* Public auth routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -31,7 +35,8 @@ function App() {
         <Route path="/sessions" element={<Sessions />} />
         <Route path="/review" element={<ReviewMode />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }
 
